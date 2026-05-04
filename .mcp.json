@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mcp-android": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "--network", "host",
+        "-e", "ADB_SERVER_HOST=host.docker.internal",
+        "-e", "ADB_SERVER_PORT=5037",
+        "ghcr.io/ismail-kattakath/mcp-android:latest"
+      ]
+    }
+  }
+}

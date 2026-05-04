@@ -1,0 +1,21 @@
+services:
+  mcp-android:
+    build: .
+    image: mcp-android:latest
+    stdin_open: true
+    tty: false
+    # USB passthrough for physical device (Linux host)
+    privileged: true
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      # Mount scrcpy-server binary (download from https://github.com/Genymobile/scrcpy/releases)
+      # - ./scrcpy-server:/opt/scrcpy-server:ro
+    environment:
+      ADB_PATH: adb
+      FFMPEG_PATH: ffmpeg
+      # SCRCPY_SERVER_PATH: /opt/scrcpy-server  # uncomment when using streaming
+      # SCRCPY_SERVER_VERSION: "3.2"             # must match your scrcpy-server version
+      DEFAULT_MAX_SIZE: "1024"
+      DEFAULT_MAX_FPS: "30"
+      DEFAULT_FRAME_FPS: "2"
+      LOG_LEVEL: "2"   # 0=ERROR 1=WARN 2=INFO 3=DEBUG

@@ -1,0 +1,63 @@
+{
+  "name": "@ismail-kattakath/mcp-android",
+  "version": "1.0.0",
+  "description": "Comprehensive Android device control MCP server — ADB + scrcpy H.264 vision streaming + fast input. 37 tools.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mcp-android": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "icon.png",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "android",
+    "adb",
+    "scrcpy",
+    "automation",
+    "mobile",
+    "docker",
+    "ai-tools",
+    "claude",
+    "cursor",
+    "llm-tools",
+    "android-automation",
+    "screen-capture",
+    "ui-automation"
+  ],
+  "author": "Ismail Kattakath <IsmailK@infin8it.ca>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ismail-kattakath/mcp-android.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ismail-kattakath/mcp-android/issues"
+  },
+  "homepage": "https://github.com/ismail-kattakath/mcp-android#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

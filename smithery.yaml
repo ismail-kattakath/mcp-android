@@ -1,0 +1,53 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      adbServerHost:
+        type: string
+        title: ADB Server Host
+        description: >
+          Hostname of the ADB server. When running inside Docker use
+          "host.docker.internal" to reach the host's adb daemon.
+          Leave blank if adb is in PATH and devices are directly accessible.
+        default: ""
+      adbServerPort:
+        type: integer
+        title: ADB Server Port
+        description: Port of the ADB server (default 5037).
+        default: 5037
+      scrcpyServerPath:
+        type: string
+        title: scrcpy Server Path
+        description: >
+          Absolute path to the scrcpy-server binary. Required only for vision
+          streaming (android.vision.startStream). Download from
+          https://github.com/Genymobile/scrcpy/releases
+        default: ""
+      scrcpyServerVersion:
+        type: string
+        title: scrcpy Server Version
+        description: >
+          Version string matching the scrcpy-server binary (e.g. "3.2").
+          Must match exactly.
+        default: ""
+      logLevel:
+        type: integer
+        title: Log Level
+        description: "Verbosity: 0=silent, 1=errors, 2=info, 3=debug"
+        default: 2
+    required: []
+  commandFunction: |-
+    (config) => ({
+      command: "docker",
+      args: [
+        "run", "--rm", "-i",
+        "--network", "host",
+        "-e", `ADB_SERVER_HOST=${config.adbServerHost || ""}`,
+        "-e", `ADB_SERVER_PORT=${config.adbServerPort || 5037}`,
+        "-e", `SCRCPY_SERVER_PATH=${config.scrcpyServerPath || ""}`,
+        "-e", `SCRCPY_SERVER_VERSION=${config.scrcpyServerVersion || ""}`,
+        "-e", `LOG_LEVEL=${config.logLevel ?? 2}`,
+        "ghcr.io/ismail-kattakath/mcp-android:latest"
+      ]
+    })
