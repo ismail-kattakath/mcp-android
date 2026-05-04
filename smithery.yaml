@@ -1,3 +1,6 @@
+name: Android Device Control
+description: Comprehensive Android device control — ADB + scrcpy H.264 vision streaming + fast input. 37 tools for AI agents. Works over USB or WiFi with no device agent required.
+
 startCommand:
   type: stdio
   configSchema:

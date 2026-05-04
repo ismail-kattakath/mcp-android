@@ -1,7 +1,7 @@
 {
   "name": "@ismail-kattakath/mcp-android",
   "version": "1.0.0",
-  "description": "Comprehensive Android device control MCP server — ADB + scrcpy H.264 vision streaming + fast input. 37 tools.",
+  "description": "Android Device Control — ADB + scrcpy H.264 vision streaming + fast input. 37 tools for AI agents.",
   "type": "module",
   "main": "dist/index.js",
   "bin": {

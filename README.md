@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="icon.png" alt="Android MCP" width="120" />
-  <h1>mcp-android</h1>
+  <img src="icon.png" alt="Android Device Control" width="120" />
+  <h1>Android Device Control</h1>
   <p><strong>Comprehensive Android device control for AI agents</strong></p>
-  <p>ADB + scrcpy H.264 vision streaming + fast input — 37 MCP tools</p>
+  <p>ADB + scrcpy H.264 vision streaming + fast input — 37 tools</p>
 
   [![npm version](https://img.shields.io/npm/v/@ismail-kattakath/mcp-android?logo=npm&color=CB0000)](https://www.npmjs.com/package/@ismail-kattakath/mcp-android)
   [![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/ismail-kattakath/mcp-android?logo=docker)](https://github.com/ismail-kattakath/mcp-android/pkgs/container/mcp-android)

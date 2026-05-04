@@ -70,10 +70,10 @@ ENV ADB_PATH=adb \
     ADB_SERVER_HOST="" \
     ADB_SERVER_PORT=""
 
-LABEL org.opencontainers.image.title="Android MCP" \
-      org.opencontainers.image.description="Comprehensive Android device control MCP server — ADB + scrcpy vision + fast input. 37 tools." \
+LABEL org.opencontainers.image.title="Android Device Control" \
+      org.opencontainers.image.description="Comprehensive Android device control — ADB + scrcpy vision + fast input. 37 tools." \
       com.docker.desktop.mcp.server.name="mcp-android" \
-      com.docker.desktop.mcp.server.title="Android MCP" \
+      com.docker.desktop.mcp.server.title="Android Device Control" \
       com.docker.desktop.mcp.server.description="Comprehensive Android device control — ADB, scrcpy H.264 streaming, fast input, APK install, logcat, Activity/Package Manager. 37 tools."
 
 ENTRYPOINT ["node", "dist/index.js"]

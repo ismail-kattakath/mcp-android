@@ -34,7 +34,7 @@ if (cfg.adbServerHost) {
 }
 
 const server = new McpServer({
-  name: "mcp-android",
+  name: "android-device-control",
   version: "1.0.0",
 });
 
