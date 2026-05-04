@@ -37,16 +37,21 @@ docker run --rm -i \
   -v /dev/bus/usb:/dev/bus/usb \
   ghcr.io/ismail-kattakath/mcp-android:latest
 
-# WiFi ADB / Docker MCP gateway (no USB passthrough needed)
+# WiFi ADB — macOS / Windows (host.docker.internal resolves in bridge mode)
 docker run --rm -i \
-  --network host \
+  -e ADB_SERVER_HOST=host.docker.internal \
+  -e ADB_SERVER_PORT=5037 \
+  ghcr.io/ismail-kattakath/mcp-android:latest
+
+# WiFi ADB — Linux (host.docker.internal requires --add-host)
+docker run --rm -i \
+  --add-host=host.docker.internal:host-gateway \
   -e ADB_SERVER_HOST=host.docker.internal \
   -e ADB_SERVER_PORT=5037 \
   ghcr.io/ismail-kattakath/mcp-android:latest
 
 # With scrcpy vision streaming
 docker run --rm -i \
-  --network host \
   -e ADB_SERVER_HOST=host.docker.internal \
   -v /path/to/scrcpy-server:/opt/scrcpy-server:ro \
   -e SCRCPY_SERVER_PATH=/opt/scrcpy-server \
@@ -72,10 +77,10 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 {
   "mcpServers": {
     "mcp-android": {
+      "type": "stdio",
       "command": "docker",
       "args": [
         "run", "--rm", "-i",
-        "--network", "host",
         "-e", "ADB_SERVER_HOST=host.docker.internal",
         "-e", "ADB_SERVER_PORT=5037",
         "ghcr.io/ismail-kattakath/mcp-android:latest"
@@ -84,6 +89,8 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   }
 }
 ```
+
+> **Linux users:** replace `-e ADB_SERVER_HOST=host.docker.internal` with `--add-host=host.docker.internal:host-gateway -e ADB_SERVER_HOST=host.docker.internal`
 
 **npx variant:**
 ```json
@@ -101,7 +108,6 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ```bash
 claude mcp add mcp-android -- docker run --rm -i \
-  --network host \
   -e ADB_SERVER_HOST=host.docker.internal \
   ghcr.io/ismail-kattakath/mcp-android:latest
 ```
@@ -112,10 +118,10 @@ Or add to your project's `.mcp.json`:
 {
   "mcpServers": {
     "mcp-android": {
+      "type": "stdio",
       "command": "docker",
       "args": [
         "run", "--rm", "-i",
-        "--network", "host",
         "-e", "ADB_SERVER_HOST=host.docker.internal",
         "ghcr.io/ismail-kattakath/mcp-android:latest"
       ]
@@ -126,18 +132,19 @@ Or add to your project's `.mcp.json`:
 
 ### Cursor
 
-Open **Cursor Settings → MCP → Add Server** and paste:
+Open **Cursor Settings → MCP** and add to the config file:
 
 ```json
 {
-  "mcp-android": {
-    "command": "docker",
-    "args": [
-      "run", "--rm", "-i",
-      "--network", "host",
-      "-e", "ADB_SERVER_HOST=host.docker.internal",
-      "ghcr.io/ismail-kattakath/mcp-android:latest"
-    ]
+  "mcpServers": {
+    "mcp-android": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "ADB_SERVER_HOST=host.docker.internal",
+        "ghcr.io/ismail-kattakath/mcp-android:latest"
+      ]
+    }
   }
 }
 ```
@@ -150,8 +157,12 @@ Open **Cursor Settings → MCP → Add Server** and paste:
 {
   "mcpServers": {
     "mcp-android": {
-      "command": "npx",
-      "args": ["-y", "@ismail-kattakath/mcp-android"]
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "ADB_SERVER_HOST=host.docker.internal",
+        "ghcr.io/ismail-kattakath/mcp-android:latest"
+      ]
     }
   }
 }
@@ -161,13 +172,21 @@ Open **Cursor Settings → MCP → Add Server** and paste:
 
 ```json
 {
-  "mcpServers": [
-    {
-      "name": "mcp-android",
-      "command": "npx",
-      "args": ["-y", "@ismail-kattakath/mcp-android"]
-    }
-  ]
+  "experimental": {
+    "modelContextProtocolServers": [
+      {
+        "transport": {
+          "type": "stdio",
+          "command": "docker",
+          "args": [
+            "run", "--rm", "-i",
+            "-e", "ADB_SERVER_HOST=host.docker.internal",
+            "ghcr.io/ismail-kattakath/mcp-android:latest"
+          ]
+        }
+      }
+    ]
+  }
 }
 ```
 
@@ -179,10 +198,13 @@ Add to your Zed `settings.json`:
 {
   "context_servers": {
     "mcp-android": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@ismail-kattakath/mcp-android"]
-      }
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "ADB_SERVER_HOST=host.docker.internal",
+        "ghcr.io/ismail-kattakath/mcp-android:latest"
+      ],
+      "env": {}
     }
   }
 }
@@ -190,12 +212,12 @@ Add to your Zed `settings.json`:
 
 ### Docker MCP Toolkit (Docker Desktop)
 
+Open **Docker Desktop → MCP Toolkit → Catalog**, search for **Android Device Control**, and add it to your profile. Or via CLI:
+
 ```bash
-# Build and add the image to your toolkit profile
-docker build -t mcp-android .
-docker mcp profile server add \
-  --profile <your-profile> \
-  mcp-android:latest
+# Add to a specific profile
+docker mcp profile server add <profile-id> \
+  --server docker://ghcr.io/ismail-kattakath/mcp-android:latest
 ```
 
 ---

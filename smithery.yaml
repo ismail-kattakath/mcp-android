@@ -45,8 +45,7 @@ startCommand:
       command: "docker",
       args: [
         "run", "--rm", "-i",
-        "--network", "host",
-        "-e", `ADB_SERVER_HOST=${config.adbServerHost || ""}`,
+        "-e", `ADB_SERVER_HOST=${config.adbServerHost || "host.docker.internal"}`,
         "-e", `ADB_SERVER_PORT=${config.adbServerPort || 5037}`,
         "-e", `SCRCPY_SERVER_PATH=${config.scrcpyServerPath || ""}`,
         "-e", `SCRCPY_SERVER_VERSION=${config.scrcpyServerVersion || ""}`,
