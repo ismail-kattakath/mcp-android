@@ -5,20 +5,26 @@ on:
     tags:
       - "v*"
 
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
   npm-publish:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      id-token: write  # required for npm trusted publishing (OIDC)
+      id-token: write
+      pull-requests: write
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
+      - name: Checkout Repo
+        uses: actions/checkout@v5
         with:
-          node-version: 22
+          persist-credentials: false
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
 
