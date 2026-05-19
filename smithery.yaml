@@ -50,6 +50,6 @@ startCommand:
         "-e", `SCRCPY_SERVER_PATH=${config.scrcpyServerPath || ""}`,
         "-e", `SCRCPY_SERVER_VERSION=${config.scrcpyServerVersion || ""}`,
         "-e", `LOG_LEVEL=${config.logLevel ?? 2}`,
-        "ghcr.io/ismail-kattakath/mcp-android:latest"
+        "ismailkattakath/mcp-android:latest"
       ]
     })

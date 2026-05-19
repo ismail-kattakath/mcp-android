@@ -1,6 +1,8 @@
+#!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { type ChildProcess } from "node:child_process";
 
 import { loadConfig, log } from "./config.js";
 import {
@@ -16,6 +18,8 @@ import {
   wakeScreen, sleepScreen, isScreenOn, unlockScreen,
   connectWifi, disconnectWifi, enableTcpip, getDeviceIp,
   installApk, getLogcat, activityManagerCommand, packageManagerCommand,
+  doubleTap, getScreenSize, getOrientation, setOrientation,
+  openUrl, uninstallApp, startScreenRecord, stopScreenRecord,
 } from "./adb.js";
 import { ScrcpySession } from "./scrcpySession.js";
 
@@ -39,6 +43,9 @@ const server = new McpServer({
 });
 
 const sessionsBySerial = new Map<string, SessionEntry>();
+
+type RecordEntry = { proc: ChildProcess; remotePath: string };
+const screenRecordSessions = new Map<string, RecordEntry>();
 
 function requireStreamingDeps() {
   if (!cfg.scrcpyServerPath || !cfg.scrcpyServerVersion) {
@@ -845,6 +852,211 @@ server.registerTool(
   }
 );
 
+// ---- Additional Input Tools ----
+
+server.registerTool(
+  "android.input.doubleTap",
+  {
+    title: "Double tap on the device screen",
+    description: "Taps the same coordinate twice in quick succession. Uses fast scrcpy control protocol when stream is active. Useful for zoom-in, like gestures, and expanding UI elements.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      x: z.number().int().nonnegative().describe("X coordinate"),
+      y: z.number().int().nonnegative().describe("Y coordinate"),
+      intervalMs: z.number().int().nonnegative().default(100).describe("Delay between taps in ms (default: 100)"),
+    }).strict(),
+  },
+  async ({ serial, x, y, intervalMs }) => {
+    const entry = sessionsBySerial.get(serial);
+    if (entry?.session.controlReady) {
+      const ok1 = entry.session.fastTap(x, y);
+      if (ok1) {
+        await new Promise(r => setTimeout(r, intervalMs));
+        entry.session.fastTap(x, y);
+        return { content: [{ type: "text", text: `Fast double-tapped ${x},${y} on ${serial} (via scrcpy)` }] };
+      }
+    }
+    await doubleTap(cfg.adbPath, serial, x, y, intervalMs);
+    return { content: [{ type: "text", text: `Double-tapped ${x},${y} on ${serial} (${intervalMs}ms interval)` }] };
+  }
+);
+
+server.registerTool(
+  "android.input.scroll",
+  {
+    title: "Scroll in a direction on the device screen",
+    description: "Scrolls up, down, left, or right from a point on the screen. Uses fast scrcpy scroll protocol when stream is active (~5ms), otherwise falls back to adb swipe.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      direction: z.enum(["up", "down", "left", "right"]).describe("Scroll direction"),
+      x: z.number().int().nonnegative().optional().describe("Scroll origin X (default: screen center)"),
+      y: z.number().int().nonnegative().optional().describe("Scroll origin Y (default: screen center)"),
+      amount: z.number().int().positive().default(500).describe("Pixels to scroll (default: 500)"),
+      durationMs: z.number().int().positive().default(300).describe("Swipe duration for fallback path (default: 300ms)"),
+    }).strict(),
+  },
+  async ({ serial, direction, x, y, amount, durationMs }) => {
+    const entry = sessionsBySerial.get(serial);
+    const cx = x ?? Math.floor((entry?.session.screenWidth ?? 1080) / 2);
+    const cy = y ?? Math.floor((entry?.session.screenHeight ?? 1920) / 2);
+
+    if (entry?.session.controlReady) {
+      const hscroll = direction === "left" ? -1.0 : direction === "right" ? 1.0 : 0;
+      const vscroll = direction === "up" ? -1.0 : direction === "down" ? 1.0 : 0;
+      const ok = entry.session.fastScroll(cx, cy, hscroll, vscroll);
+      if (ok) return { content: [{ type: "text", text: `Fast scrolled ${direction} at ${cx},${cy} on ${serial} (via scrcpy)` }] };
+    }
+
+    const half = Math.floor(amount / 2);
+    let x1 = cx, y1 = cy, x2 = cx, y2 = cy;
+    if (direction === "down")  { y1 = cy + half; y2 = cy - half; }
+    if (direction === "up")    { y1 = cy - half; y2 = cy + half; }
+    if (direction === "right") { x1 = cx + half; x2 = cx - half; }
+    if (direction === "left")  { x1 = cx - half; x2 = cx + half; }
+
+    await swipe(cfg.adbPath, serial, x1, y1, x2, y2, durationMs);
+    return { content: [{ type: "text", text: `Scrolled ${direction} at ${cx},${cy} on ${serial} (${amount}px, ${durationMs}ms)` }] };
+  }
+);
+
+// ---- Additional Screen Tools ----
+
+server.registerTool(
+  "android.screen.getSize",
+  {
+    title: "Get device screen dimensions",
+    description: "Returns screen width and height as structured data. Reports both the override (effective) size and the physical size. Useful for computing swipe coordinates.",
+    inputSchema: z.object({ serial: z.string().min(1).describe("Device serial number") }).strict(),
+  },
+  async ({ serial }) => {
+    const size = await getScreenSize(cfg.adbPath, serial);
+    return { content: [{ type: "text", text: safeJson(size) }], structuredContent: size };
+  }
+);
+
+server.registerTool(
+  "android.screen.getOrientation",
+  {
+    title: "Get device screen orientation",
+    description: "Returns the current screen orientation (portrait/landscape/portrait_reverse/landscape_reverse) and rotation degrees (0/90/180/270).",
+    inputSchema: z.object({ serial: z.string().min(1).describe("Device serial number") }).strict(),
+  },
+  async ({ serial }) => {
+    const orientation = await getOrientation(cfg.adbPath, serial);
+    return { content: [{ type: "text", text: safeJson(orientation) }], structuredContent: orientation };
+  }
+);
+
+server.registerTool(
+  "android.screen.setOrientation",
+  {
+    title: "Set device screen orientation",
+    description: "Locks the screen orientation to portrait, landscape, portrait_reverse, or landscape_reverse. Use 'auto' to re-enable accelerometer-based auto-rotation.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      orientation: z.enum(["portrait", "landscape", "portrait_reverse", "landscape_reverse", "auto"]).describe("Target orientation, or 'auto' for accelerometer control"),
+    }).strict(),
+  },
+  async ({ serial, orientation }) => {
+    await setOrientation(cfg.adbPath, serial, orientation);
+    return { content: [{ type: "text", text: `Orientation set to '${orientation}' on ${serial}` }] };
+  }
+);
+
+server.registerTool(
+  "android.screen.startRecord",
+  {
+    title: "Start screen recording",
+    description: "Starts recording the device screen using adb screenrecord. Returns the remote path where the video will be saved. Stop with android.screen.stopRecord. Requires API 19+. MPEG-4/H.264, no audio.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      remotePath: z.string().optional().describe("Path on device to save recording (default: /sdcard/mcp_record_<timestamp>.mp4)"),
+      timeLimitSecs: z.number().int().min(1).max(180).default(180).describe("Max recording duration in seconds (default: 180, max 180)"),
+      bitrateMbps: z.number().int().min(1).max(100).default(4).describe("Video bitrate in Mbps (default: 4)"),
+      size: z.string().optional().describe("Video resolution e.g. '1280x720' (default: device resolution)"),
+    }).strict(),
+  },
+  async ({ serial, remotePath, timeLimitSecs, bitrateMbps, size }) => {
+    if (screenRecordSessions.has(serial)) {
+      const existing = screenRecordSessions.get(serial)!;
+      return { content: [{ type: "text", text: safeJson({ status: "already_recording", serial, remotePath: existing.remotePath }) }] };
+    }
+    const rp = remotePath ?? `/sdcard/mcp_record_${Date.now()}.mp4`;
+    const proc = startScreenRecord(cfg.adbPath, serial, rp, timeLimitSecs, bitrateMbps, size);
+    screenRecordSessions.set(serial, { proc: proc as unknown as ChildProcess, remotePath: rp });
+    proc.once("close", () => { if (screenRecordSessions.get(serial)?.remotePath === rp) screenRecordSessions.delete(serial); });
+    log(lvl, "INFO", `Screen recording started on ${serial} → ${rp}`);
+    const out = { status: "recording", serial, remotePath: rp, timeLimitSecs, bitrateMbps };
+    return { content: [{ type: "text", text: safeJson(out) }], structuredContent: out };
+  }
+);
+
+server.registerTool(
+  "android.screen.stopRecord",
+  {
+    title: "Stop screen recording and optionally pull the file",
+    description: "Stops an active screen recording, finalizes the MP4, and optionally pulls it to the host. If localPath is provided, the file is downloaded from the device.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      localPath: z.string().optional().describe("Local path to pull the recording to (optional)"),
+    }).strict(),
+  },
+  async ({ serial, localPath }) => {
+    const entry = screenRecordSessions.get(serial);
+    if (!entry) {
+      return { content: [{ type: "text", text: safeJson({ status: "not_recording", serial }) }] };
+    }
+    await stopScreenRecord(cfg.adbPath, serial, entry.proc);
+    screenRecordSessions.delete(serial);
+    let sizeBytes: number | undefined;
+    if (localPath) {
+      const { pullFile } = await import("./adb.js");
+      await pullFile(cfg.adbPath, serial, entry.remotePath, localPath);
+      const fs = await import("node:fs");
+      try { sizeBytes = fs.statSync(localPath).size; } catch { /* ignore */ }
+    }
+    log(lvl, "INFO", `Screen recording stopped on ${serial}`);
+    const out = { status: "stopped", serial, remotePath: entry.remotePath, ...(localPath ? { localPath } : {}), ...(sizeBytes !== undefined ? { sizeBytes } : {}) };
+    return { content: [{ type: "text", text: safeJson(out) }], structuredContent: out };
+  }
+);
+
+// ---- Additional App Tools ----
+
+server.registerTool(
+  "android.app.openUrl",
+  {
+    title: "Open a URL on the device",
+    description: "Opens a URL in the default browser or app that handles the intent. Supports https://, deep links (myapp://), and market:// URLs. Optionally force a specific app package to handle it.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      url: z.string().min(1).describe("URL to open e.g. 'https://example.com' or 'market://details?id=com.example'"),
+      packageName: z.string().optional().describe("Optional: force a specific app package to handle the URL"),
+    }).strict(),
+  },
+  async ({ serial, url, packageName }) => {
+    await openUrl(cfg.adbPath, serial, url, packageName);
+    return { content: [{ type: "text", text: `Opened URL '${url}' on ${serial}${packageName ? ` (via ${packageName})` : ""}` }] };
+  }
+);
+
+server.registerTool(
+  "android.app.uninstall",
+  {
+    title: "Uninstall an app from device",
+    description: "Uninstalls an Android app by package name using adb uninstall. Optionally keeps user data and cache with keepData=true.",
+    inputSchema: z.object({
+      serial: z.string().min(1).describe("Device serial number"),
+      packageName: z.string().min(1).describe("Package name to uninstall e.g. com.example.app"),
+      keepData: z.boolean().default(false).describe("Keep user data and cache (-k flag), default false"),
+    }).strict(),
+  },
+  async ({ serial, packageName, keepData }) => {
+    const result = await uninstallApp(cfg.adbPath, serial, packageName, keepData);
+    return { content: [{ type: "text", text: result }] };
+  }
+);
+
 // ---- Startup ----
 
 log(lvl, "INFO", "Starting mcp-android server...");
@@ -852,12 +1064,15 @@ log(lvl, "INFO", "Starting mcp-android server...");
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
-log(lvl, "INFO", "mcp-android server connected and ready (37 tools)");
+log(lvl, "INFO", "mcp-android server connected and ready (46 tools)");
 
 process.on("SIGINT", () => {
   for (const entry of sessionsBySerial.values()) {
     void entry.session.stop().catch(() => {});
     entry.resourceHandle?.remove();
+  }
+  for (const entry of screenRecordSessions.values()) {
+    try { entry.proc.kill("SIGTERM"); } catch { /* ignore */ }
   }
   process.exit(0);
 });

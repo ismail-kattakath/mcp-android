@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
 // Prepended to every adb invocation when ADB_SERVER_HOST is set.
 // Allows the containerized adb client to delegate to the host's adb daemon,
@@ -452,4 +452,109 @@ export async function packageManagerCommand(
   const res = await adbShell(adbPath, serial, ["pm", pmCommand, ...additionalArgs]);
   if (res.code !== 0) throw new Error(`packageManager failed: ${res.stderr || res.stdout}`);
   return res.stdout || "Command executed successfully";
+}
+
+export async function doubleTap(
+  adbPath: string, serial: string, x: number, y: number, intervalMs: number = 100
+): Promise<void> {
+  await tap(adbPath, serial, x, y);
+  await new Promise(r => setTimeout(r, intervalMs));
+  await tap(adbPath, serial, x, y);
+}
+
+export async function getScreenSize(
+  adbPath: string, serial: string
+): Promise<{ width: number; height: number; physicalWidth: number; physicalHeight: number }> {
+  const res = await adbShell(adbPath, serial, ["wm", "size"]);
+  if (res.code !== 0) throw new Error(`getScreenSize failed: ${res.stderr || res.stdout}`);
+  const physical = res.stdout.match(/Physical size:\s*(\d+)x(\d+)/);
+  const override = res.stdout.match(/Override size:\s*(\d+)x(\d+)/);
+  const [pw, ph] = physical ? [parseInt(physical[1]), parseInt(physical[2])] : [0, 0];
+  const [ow, oh] = override ? [parseInt(override[1]), parseInt(override[2])] : [pw, ph];
+  return { width: ow, height: oh, physicalWidth: pw, physicalHeight: ph };
+}
+
+export async function getOrientation(
+  adbPath: string, serial: string
+): Promise<{ orientation: "portrait" | "landscape" | "portrait_reverse" | "landscape_reverse"; degrees: 0 | 90 | 180 | 270 }> {
+  const res = await adbShell(adbPath, serial, ["dumpsys", "window"]);
+  if (res.code === 0) {
+    const m = res.stdout.match(/mCurrentRotation=ROTATION_(\d+)/);
+    if (m) {
+      const deg = parseInt(m[1]) as 0 | 90 | 180 | 270;
+      const map: Record<number, "portrait" | "landscape" | "portrait_reverse" | "landscape_reverse"> =
+        { 0: "portrait", 90: "landscape", 180: "portrait_reverse", 270: "landscape_reverse" };
+      return { orientation: map[deg] ?? "portrait", degrees: deg };
+    }
+  }
+  const res2 = await adbShell(adbPath, serial, ["settings", "get", "system", "user_rotation"]);
+  const deg = (parseInt(res2.stdout.trim()) || 0) * 90 as 0 | 90 | 180 | 270;
+  const map: Record<number, "portrait" | "landscape" | "portrait_reverse" | "landscape_reverse"> =
+    { 0: "portrait", 90: "landscape", 180: "portrait_reverse", 270: "landscape_reverse" };
+  return { orientation: map[deg] ?? "portrait", degrees: deg };
+}
+
+export async function setOrientation(
+  adbPath: string, serial: string,
+  orientation: "portrait" | "landscape" | "portrait_reverse" | "landscape_reverse" | "auto"
+): Promise<void> {
+  if (orientation === "auto") {
+    const res = await adbShell(adbPath, serial, ["settings", "put", "system", "accelerometer_rotation", "1"]);
+    if (res.code !== 0) throw new Error(`setOrientation failed: ${res.stderr || res.stdout}`);
+    return;
+  }
+  const rotMap: Record<string, string> = { portrait: "0", landscape: "1", portrait_reverse: "2", landscape_reverse: "3" };
+  const rot = rotMap[orientation];
+  const r1 = await adbShell(adbPath, serial, ["settings", "put", "system", "accelerometer_rotation", "0"]);
+  if (r1.code !== 0) throw new Error(`setOrientation lock failed: ${r1.stderr || r1.stdout}`);
+  const r2 = await adbShell(adbPath, serial, ["settings", "put", "system", "user_rotation", rot]);
+  if (r2.code !== 0) throw new Error(`setOrientation rotate failed: ${r2.stderr || r2.stdout}`);
+}
+
+export async function openUrl(
+  adbPath: string, serial: string, url: string, packageName?: string
+): Promise<void> {
+  const args = ["am", "start", "-a", "android.intent.action.VIEW", "-d", url];
+  if (packageName) args.push("-p", packageName);
+  const res = await adbShell(adbPath, serial, args);
+  if (res.code !== 0) throw new Error(`openUrl failed: ${res.stderr || res.stdout}`);
+}
+
+export async function uninstallApp(
+  adbPath: string, serial: string, packageName: string, keepData: boolean = false
+): Promise<string> {
+  const args = ["-s", serial, "uninstall"];
+  if (keepData) args.push("-k");
+  args.push(packageName);
+  const res = await adbExec(adbPath, args);
+  const combined = (res.stdout + res.stderr).trim();
+  if (res.code !== 0 && !combined.includes("Success")) {
+    throw new Error(`uninstallApp failed: ${combined}`);
+  }
+  return combined || "Success";
+}
+
+export function startScreenRecord(
+  adbPath: string, serial: string,
+  remotePath: string, timeLimitSecs: number, bitrateMbps: number, size?: string
+): ReturnType<typeof spawn> {
+  const args = [
+    ...(_adbConnPrefix.length ? _adbConnPrefix : []),
+    "-s", serial, "shell", "screenrecord",
+    "--bit-rate", `${bitrateMbps}M`,
+    "--time-limit", String(timeLimitSecs),
+  ];
+  if (size) args.push("--size", size);
+  args.push(remotePath);
+  return spawn(adbPath, args, { stdio: ["ignore", "pipe", "pipe"] });
+}
+
+export async function stopScreenRecord(
+  adbPath: string, serial: string, proc: ReturnType<typeof spawn>
+): Promise<void> {
+  await adbShell(adbPath, serial, ["pkill", "-2", "screenrecord"]).catch(() => {});
+  await new Promise<void>((resolve) => {
+    const t = setTimeout(() => { try { proc.kill("SIGTERM"); } catch { /* ignore */ } resolve(); }, 5000);
+    proc.once("close", () => { clearTimeout(t); resolve(); });
+  });
 }
