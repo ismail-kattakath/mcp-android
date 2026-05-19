@@ -33,6 +33,13 @@ jobs:
 
       - run: npm run build
 
+      - name: Remove stale version tag if present
+        env:
+          GH_TOKEN: ${{ secrets.CHANGESET_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          gh api --method DELETE "repos/${{ github.repository }}/git/refs/tags/v${VERSION}" 2>/dev/null || true
+
       - id: changesets
         uses: changesets/action@v1
         with:
