@@ -1,5 +1,5 @@
 # mcp-android — combined ADB + scrcpy-vision MCP server
-# Provides 37 tools for Android device control, screen streaming, and UI automation.
+# Provides 46 tools for Android device control, screen streaming, and UI automation.
 #
 # Build:
 #   docker build -t mcp-android .
@@ -27,17 +27,22 @@
 #     -v /dev/bus/usb:/dev/bus/usb \
 #     mcp-android
 
-FROM node:22-alpine AS builder
+# Build on host platform to avoid QEMU illegal instruction crashes during npm install.
+# All deps are pure JS so the pruned node_modules are safe to copy into any target image.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --ignore-scripts
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
 
 COPY tsconfig.json ./
 COPY src ./src
 
 RUN npm run build
+
+# Prune to production deps on the host platform
+RUN npm prune --omit=dev
 
 # ---- Runtime stage ----
 FROM node:22-alpine
@@ -47,10 +52,10 @@ RUN apk add --no-cache android-tools ffmpeg
 
 WORKDIR /app
 
-COPY package.json ./
-RUN npm install --omit=dev --ignore-scripts
-
+# Copy build output and pruned deps from builder — no npm install needed at runtime
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY package.json ./
 
 # Optional scrcpy-server binary mount point
 RUN mkdir -p /opt/scrcpy
@@ -71,9 +76,9 @@ ENV ADB_PATH=adb \
     ADB_SERVER_PORT=""
 
 LABEL org.opencontainers.image.title="Android Device Control" \
-      org.opencontainers.image.description="Comprehensive Android device control — ADB + scrcpy vision + fast input. 37 tools." \
+      org.opencontainers.image.description="Comprehensive Android device control — ADB + scrcpy vision + fast input. 46 tools." \
       com.docker.desktop.mcp.server.name="mcp-android" \
       com.docker.desktop.mcp.server.title="Android Device Control" \
-      com.docker.desktop.mcp.server.description="Comprehensive Android device control — ADB, scrcpy H.264 streaming, fast input, APK install, logcat, Activity/Package Manager. 37 tools."
+      com.docker.desktop.mcp.server.description="Comprehensive Android device control — ADB, scrcpy H.264 streaming, fast input, APK install, logcat, Activity/Package Manager. 46 tools."
 
 ENTRYPOINT ["node", "dist/index.js"]
