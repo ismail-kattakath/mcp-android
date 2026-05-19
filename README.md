@@ -5,7 +5,7 @@
   <p>ADB + scrcpy H.264 vision streaming + fast input — 46 tools</p>
 
   [![npm version](https://img.shields.io/npm/v/@ismail-kattakath/mcp-android?logo=npm&color=CB0000)](https://www.npmjs.com/package/@ismail-kattakath/mcp-android)
-  [![GHCR](https://img.shields.io/badge/ghcr.io-latest-blue?logo=docker)](https://github.com/ismail-kattakath/mcp-android/pkgs/container/mcp-android)
+  [![Docker Hub](https://img.shields.io/docker/v/ismailkattakath/mcp-android?logo=docker&color=blue&label=docker%20hub)](https://hub.docker.com/r/ismailkattakath/mcp-android)
   [![CI](https://github.com/ismail-kattakath/mcp-android/actions/workflows/ci.yml/badge.svg)](https://github.com/ismail-kattakath/mcp-android/actions/workflows/ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   [![Node.js 20+](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=nodedotjs)](https://nodejs.org)
@@ -42,18 +42,18 @@ npx @ismail-kattakath/mcp-android
 # macOS / Windows — delegate to host ADB daemon
 docker run --rm -i \
   -e ADB_SERVER_HOST=host.docker.internal \
-  ghcr.io/ismail-kattakath/mcp-android:latest
+  ismailkattakath/mcp-android:latest
 
 # Linux — same, but host.docker.internal needs --add-host
 docker run --rm -i \
   --add-host=host.docker.internal:host-gateway \
   -e ADB_SERVER_HOST=host.docker.internal \
-  ghcr.io/ismail-kattakath/mcp-android:latest
+  ismailkattakath/mcp-android:latest
 
 # USB-connected device (requires --privileged)
 docker run --rm -i --privileged \
   -v /dev/bus/usb:/dev/bus/usb \
-  ghcr.io/ismail-kattakath/mcp-android:latest
+  ismailkattakath/mcp-android:latest
 ```
 
 ---
@@ -85,7 +85,7 @@ Choose your transport once and use the same config in any client.
       "args": [
         "run", "--rm", "-i",
         "-e", "ADB_SERVER_HOST=host.docker.internal",
-        "ghcr.io/ismail-kattakath/mcp-android:latest"
+        "ismailkattakath/mcp-android:latest"
       ]
     }
   }
@@ -104,7 +104,7 @@ Choose your transport once and use the same config in any client.
 | **VS Code / Cline** | `.vscode/cline_mcp_settings.json` |
 | **VS Code / Continue** | `~/.continue/config.json` under `experimental.modelContextProtocolServers[].transport` |
 | **Zed** | `settings.json` under `context_servers` |
-| **Docker Desktop MCP Toolkit** | Search **Android Device Control** in the catalog, or `docker mcp profile server add <id> --server docker://ghcr.io/ismail-kattakath/mcp-android:latest` |
+| **Docker Desktop MCP Toolkit** | Search **Android Device Control** in the catalog, or `docker mcp profile server add <id> --server docker://ismailkattakath/mcp-android:latest` |
 
 ---
 
@@ -132,7 +132,7 @@ docker run --rm -i \
   -e SCRCPY_SERVER_PATH=/opt/scrcpy-server \
   -e SCRCPY_SERVER_VERSION=3.2 \
   -v /tmp/scrcpy-server:/opt/scrcpy-server:ro \
-  ghcr.io/ismail-kattakath/mcp-android:latest
+  ismailkattakath/mcp-android:latest
 ```
 
 Once started with `android.vision.startStream`, a live resource is registered at `android://device/<serial>/frame/latest.jpg`. Read it to get the latest JPEG frame. Fast input via the scrcpy control protocol (~5ms) is also enabled automatically.
