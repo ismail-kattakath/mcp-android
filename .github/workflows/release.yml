@@ -2,18 +2,27 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  npm:
+  release:
+    name: Release
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
+      pull-requests: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v5
         with:
@@ -21,10 +30,19 @@ jobs:
           cache: npm
 
       - run: npm ci --ignore-scripts
+
       - run: npm run build
-      - run: npm publish --access public --provenance
+
+      - id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: npx changeset publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.CHANGESET_TOKEN }}
 
   docker:
+    needs: release
+    if: needs.release.outputs.published == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,9 +60,7 @@ jobs:
         with:
           images: ismailkattakath/mcp-android
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=${{ fromJSON(needs.release.outputs.publishedPackages)[0].version }}
             type=raw,value=latest
 
       - uses: docker/setup-qemu-action@v3
@@ -62,7 +78,8 @@ jobs:
           cache-to: type=gha,mode=max
 
   github-release:
-    needs: [npm, docker]
+    needs: [release, docker]
+    if: needs.release.outputs.published == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -70,9 +87,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          files: |
-            README.md
-            CHANGELOG.md
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGES: ${{ needs.release.outputs.publishedPackages }}
+        run: |
+          VERSION=$(node -p "JSON.parse(process.env.PACKAGES)[0].version")
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --generate-notes
