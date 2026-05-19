@@ -59,6 +59,10 @@ Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml). Include:
 
 Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml). Check [open issues](https://github.com/ismail-kattakath/mcp-android/issues) first.
 
+### Versioning
+
+We use `@changesets/cli`. When you create a PR that should trigger a version bump, run `npx changeset` and follow the prompts.
+
 ### Pull Requests
 
 1. Fork the repository and create a branch from `main`
@@ -66,7 +70,8 @@ Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml). 
 3. Run `npm run typecheck` — no type errors allowed
 4. Run `npm run build` — must compile cleanly
 5. Test against a real device if possible
-6. Open a PR against `main`
+6. Run `npx changeset` if your changes affect behaviour or the public API
+7. Open a PR against `main`
 
 #### Commit Message Style
 
