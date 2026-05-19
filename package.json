@@ -1,6 +1,6 @@
 {
   "name": "@ismail-kattakath/mcp-android",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Android Device Control — ADB + scrcpy H.264 vision streaming + fast input. 46 tools for AI agents.",
   "type": "module",
   "main": "dist/index.js",
