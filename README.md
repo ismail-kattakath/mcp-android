@@ -5,7 +5,7 @@
   <p>ADB + scrcpy H.264 vision streaming + fast input — 37 tools</p>
 
   [![npm version](https://img.shields.io/npm/v/@ismail-kattakath/mcp-android?logo=npm&color=CB0000)](https://www.npmjs.com/package/@ismail-kattakath/mcp-android)
-  [![Docker Pulls](https://img.shields.io/docker/pulls/ghcr.io/ismail-kattakath/mcp-android?logo=docker)](https://github.com/ismail-kattakath/mcp-android/pkgs/container/mcp-android)
+  [![GHCR](https://img.shields.io/badge/ghcr.io-latest-blue?logo=docker)](https://github.com/ismail-kattakath/mcp-android/pkgs/container/mcp-android)
   [![CI](https://github.com/ismail-kattakath/mcp-android/actions/workflows/ci.yml/badge.svg)](https://github.com/ismail-kattakath/mcp-android/actions/workflows/ci.yml)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
   [![Node.js 20+](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=nodedotjs)](https://nodejs.org)
@@ -14,85 +14,56 @@
 
 ---
 
-Give your AI agent full control over Android devices — take screenshots, tap and swipe, type text, stream live video, install APKs, read logcat, manage apps, and more. Works over USB or WiFi ADB, with or without scrcpy streaming, inside Docker or via npx.
+Give your AI agent full control over Android devices — take screenshots, tap and swipe, type text, stream live video, install APKs, read logcat, manage apps, and more. Works over USB or WiFi ADB, with or without scrcpy streaming.
 
 ## Features
 
 - **37 MCP tools** across 11 categories — devices, vision, input, UI, apps, system, files, clipboard, notifications, screen control, WiFi ADB
 - **Live H.264 vision streaming** via scrcpy standalone server + ffmpeg → JPEG resources at ~2 FPS
-- **Fast input** via scrcpy control protocol (~5ms per event vs ~100-300ms for `adb shell input`)
+- **Fast input** via scrcpy control protocol (~5ms per event vs ~100–300ms for `adb shell input`)
 - **Snapshot mode** — screenshot + UI dump work without scrcpy, no extra deps
-- **Docker MCP Toolkit** — works as a Docker MCP server with host ADB daemon delegation
-- **WiFi ADB** — full manage-connect-disconnect lifecycle
-- **APK install**, **logcat**, **Activity Manager**, **Package Manager** commands
+- **WiFi ADB** — full enable → get-IP → connect → disconnect lifecycle
+
+---
 
 ## Quick Start
 
-### Docker (recommended)
-
-```bash
-# USB-connected device (requires --privileged)
-docker run --rm -i \
-  --privileged \
-  -v /dev/bus/usb:/dev/bus/usb \
-  ghcr.io/ismail-kattakath/mcp-android:latest
-
-# WiFi ADB — macOS / Windows (host.docker.internal resolves in bridge mode)
-docker run --rm -i \
-  -e ADB_SERVER_HOST=host.docker.internal \
-  -e ADB_SERVER_PORT=5037 \
-  ghcr.io/ismail-kattakath/mcp-android:latest
-
-# WiFi ADB — Linux (host.docker.internal requires --add-host)
-docker run --rm -i \
-  --add-host=host.docker.internal:host-gateway \
-  -e ADB_SERVER_HOST=host.docker.internal \
-  -e ADB_SERVER_PORT=5037 \
-  ghcr.io/ismail-kattakath/mcp-android:latest
-
-# With scrcpy vision streaming
-docker run --rm -i \
-  -e ADB_SERVER_HOST=host.docker.internal \
-  -v /path/to/scrcpy-server:/opt/scrcpy-server:ro \
-  -e SCRCPY_SERVER_PATH=/opt/scrcpy-server \
-  -e SCRCPY_SERVER_VERSION=3.2 \
-  ghcr.io/ismail-kattakath/mcp-android:latest
-```
-
-### npx
+### npx (no install required)
 
 ```bash
 npx @ismail-kattakath/mcp-android
 ```
 
-> **Note:** `adb` must be in your PATH. Install via `brew install android-platform-tools` (macOS) or `sudo apt install adb` (Ubuntu).
+> Requires `adb` in your PATH: `brew install android-platform-tools` (macOS) or `sudo apt install adb` (Ubuntu/Debian).
 
-## Client Setup
+### Docker (no Node.js required)
 
-### Claude Desktop
+```bash
+# macOS / Windows — delegate to host ADB daemon
+docker run --rm -i \
+  -e ADB_SERVER_HOST=host.docker.internal \
+  ghcr.io/ismail-kattakath/mcp-android:latest
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+# Linux — same, but host.docker.internal needs --add-host
+docker run --rm -i \
+  --add-host=host.docker.internal:host-gateway \
+  -e ADB_SERVER_HOST=host.docker.internal \
+  ghcr.io/ismail-kattakath/mcp-android:latest
 
-```json
-{
-  "mcpServers": {
-    "mcp-android": {
-      "type": "stdio",
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "ADB_SERVER_HOST=host.docker.internal",
-        "-e", "ADB_SERVER_PORT=5037",
-        "ghcr.io/ismail-kattakath/mcp-android:latest"
-      ]
-    }
-  }
-}
+# USB-connected device (requires --privileged)
+docker run --rm -i --privileged \
+  -v /dev/bus/usb:/dev/bus/usb \
+  ghcr.io/ismail-kattakath/mcp-android:latest
 ```
 
-> **Linux users:** replace `-e ADB_SERVER_HOST=host.docker.internal` with `--add-host=host.docker.internal:host-gateway -e ADB_SERVER_HOST=host.docker.internal`
+---
 
-**npx variant:**
+## MCP Client Setup
+
+Choose your transport once and use the same config in any client.
+
+### Option A — npx (recommended)
+
 ```json
 {
   "mcpServers": {
@@ -104,35 +75,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-### Claude Code CLI
-
-```bash
-claude mcp add mcp-android -- docker run --rm -i \
-  -e ADB_SERVER_HOST=host.docker.internal \
-  ghcr.io/ismail-kattakath/mcp-android:latest
-```
-
-Or add to your project's `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "mcp-android": {
-      "type": "stdio",
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "ADB_SERVER_HOST=host.docker.internal",
-        "ghcr.io/ismail-kattakath/mcp-android:latest"
-      ]
-    }
-  }
-}
-```
-
-### Cursor
-
-Open **Cursor Settings → MCP** and add to the config file:
+### Option B — Docker
 
 ```json
 {
@@ -149,139 +92,86 @@ Open **Cursor Settings → MCP** and add to the config file:
 }
 ```
 
-### VS Code (Cline / Continue)
+> **Linux Docker users:** add `"--add-host=host.docker.internal:host-gateway"` before the `-e` flag.
 
-**Cline** — add to `.vscode/cline_mcp_settings.json`:
+### Where to put the config
 
-```json
-{
-  "mcpServers": {
-    "mcp-android": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "ADB_SERVER_HOST=host.docker.internal",
-        "ghcr.io/ismail-kattakath/mcp-android:latest"
-      ]
-    }
-  }
-}
-```
-
-**Continue** — add to `~/.continue/config.json`:
-
-```json
-{
-  "experimental": {
-    "modelContextProtocolServers": [
-      {
-        "transport": {
-          "type": "stdio",
-          "command": "docker",
-          "args": [
-            "run", "--rm", "-i",
-            "-e", "ADB_SERVER_HOST=host.docker.internal",
-            "ghcr.io/ismail-kattakath/mcp-android:latest"
-          ]
-        }
-      }
-    ]
-  }
-}
-```
-
-### Zed
-
-Add to your Zed `settings.json`:
-
-```json
-{
-  "context_servers": {
-    "mcp-android": {
-      "command": "docker",
-      "args": [
-        "run", "--rm", "-i",
-        "-e", "ADB_SERVER_HOST=host.docker.internal",
-        "ghcr.io/ismail-kattakath/mcp-android:latest"
-      ],
-      "env": {}
-    }
-  }
-}
-```
-
-### Docker MCP Toolkit (Docker Desktop)
-
-Open **Docker Desktop → MCP Toolkit → Catalog**, search for **Android Device Control**, and add it to your profile. Or via CLI:
-
-```bash
-# Add to a specific profile
-docker mcp profile server add <profile-id> \
-  --server docker://ghcr.io/ismail-kattakath/mcp-android:latest
-```
+| Client | Config file |
+|--------|-------------|
+| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) · `%APPDATA%\Claude\claude_desktop_config.json` (Windows) |
+| **Claude Code** | `.mcp.json` in your project root, or `claude mcp add mcp-android -- npx -y @ismail-kattakath/mcp-android` |
+| **Cursor** | **Cursor Settings → MCP** config file |
+| **VS Code / Cline** | `.vscode/cline_mcp_settings.json` |
+| **VS Code / Continue** | `~/.continue/config.json` under `experimental.modelContextProtocolServers[].transport` |
+| **Zed** | `settings.json` under `context_servers` |
+| **Docker Desktop MCP Toolkit** | Search **Android Device Control** in the catalog, or `docker mcp profile server add <id> --server docker://ghcr.io/ismail-kattakath/mcp-android:latest` |
 
 ---
 
-## Vision Streaming Setup
+## Vision Streaming
 
-Vision streaming requires the [scrcpy standalone server](https://github.com/Genymobile/scrcpy/releases) binary. Download `scrcpy-server-v3.2` (or later) and provide its path:
+Vision streaming requires the [scrcpy standalone server](https://github.com/Genymobile/scrcpy/releases) binary and `ffmpeg`.
 
 ```bash
-# Download scrcpy server (example for v3.2)
+# Download scrcpy server binary (example: v3.2)
 wget https://github.com/Genymobile/scrcpy/releases/download/v3.2/scrcpy-server-v3.2 \
   -O /tmp/scrcpy-server
+```
 
+**npx:**
+```bash
+SCRCPY_SERVER_PATH=/tmp/scrcpy-server \
+SCRCPY_SERVER_VERSION=3.2 \
+npx @ismail-kattakath/mcp-android
+```
+
+**Docker:**
+```bash
 docker run --rm -i \
-  --network host \
   -e ADB_SERVER_HOST=host.docker.internal \
-  -v /tmp/scrcpy-server:/opt/scrcpy-server:ro \
   -e SCRCPY_SERVER_PATH=/opt/scrcpy-server \
   -e SCRCPY_SERVER_VERSION=3.2 \
+  -v /tmp/scrcpy-server:/opt/scrcpy-server:ro \
   ghcr.io/ismail-kattakath/mcp-android:latest
 ```
 
-Once the stream is started with `android.vision.startStream`, the server registers a live resource at `android://device/<serial>/frame/latest.jpg`. Read it to get the latest JPEG frame.
+Once started with `android.vision.startStream`, a live resource is registered at `android://device/<serial>/frame/latest.jpg`. Read it to get the latest JPEG frame. Fast input via the scrcpy control protocol (~5ms) is also enabled automatically.
 
 ---
 
 ## Tool Reference
 
-### Device (2 tools)
-
+### Device (2)
 | Tool | Description |
 |------|-------------|
 | `android.devices.list` | List all connected devices (`adb devices -l`) |
 | `android.devices.info` | Get device model, brand, SDK version via `getprop` |
 
-### Vision (3 tools)
-
+### Vision (3)
 | Tool | Description |
 |------|-------------|
 | `android.vision.startStream` | Start H.264 stream via scrcpy → JPEG resource; enables fast input |
 | `android.vision.stopStream` | Stop stream and remove frame resource |
-| `android.vision.snapshot` | Take a PNG screenshot via `adb exec-out screencap -p` |
+| `android.vision.snapshot` | Take PNG screenshot via `adb exec-out screencap -p` |
 
-### Input (7 tools)
-
+### Input (7)
 | Tool | Description |
 |------|-------------|
 | `android.input.tap` | Tap at (x, y) — fast via scrcpy or `adb shell input` |
-| `android.input.swipe` | Swipe with duration |
+| `android.input.swipe` | Swipe from → to with duration |
 | `android.input.text` | Type text (full UTF-8 via scrcpy, or `adb shell input text`) |
 | `android.input.keyevent` | Send keycode (HOME=3, BACK=4, POWER=26, ENTER=66…) |
 | `android.input.longPress` | Long press with duration |
 | `android.input.pinch` | Pinch gesture (zoom in/out) |
 | `android.input.dragDrop` | Drag and drop |
 
-### UI Automation (2 tools)
-
+### UI Automation (2)
 | Tool | Description |
 |------|-------------|
 | `android.ui.dump` | Dump full UI hierarchy XML via uiautomator |
-| `android.ui.findElement` | Find elements by text, resource-id, class, or content-desc; returns center coordinates |
+| `android.ui.findElement` | Find elements by text, resource-id, class, or content-desc — returns center coordinates |
 
-### Apps (5 tools)
-
+### Apps (5)
 | Tool | Description |
 |------|-------------|
 | `android.app.start` | Launch app by package name (+ optional activity) |
@@ -290,38 +180,33 @@ Once the stream is started with `android.vision.startStream`, the server registe
 | `android.apps.list` | List installed packages (all / system-only / third-party) |
 | `android.activity.current` | Get currently focused package and activity |
 
-### System (4 tools)
-
+### System (4)
 | Tool | Description |
 |------|-------------|
 | `android.shell.exec` | Execute arbitrary shell command via `adb shell` |
-| `android.system.logcat` | Capture logcat output (with optional filter + line limit) |
-| `android.system.activityManager` | Run `am` commands (start, broadcast, force-stop, etc.) |
-| `android.system.packageManager` | Run `pm` commands (list, grant, revoke, clear, etc.) |
+| `android.system.logcat` | Capture logcat output (optional filter + line limit) |
+| `android.system.activityManager` | Run `am` commands (start, broadcast, force-stop…) |
+| `android.system.packageManager` | Run `pm` commands (list, grant, revoke, clear…) |
 
-### Files (3 tools)
-
+### Files (3)
 | Tool | Description |
 |------|-------------|
 | `android.file.push` | Push local file to device |
 | `android.file.pull` | Pull file from device to host |
 | `android.file.list` | List directory contents (`ls -la`) |
 
-### Clipboard (2 tools)
-
+### Clipboard (2)
 | Tool | Description |
 |------|-------------|
 | `android.clipboard.get` | Get clipboard content via `dumpsys clipboard` |
-| `android.clipboard.set` | Set clipboard content (limited on Android 10+) |
+| `android.clipboard.set` | Set clipboard content (restricted on Android 10+) |
 
-### Notifications (1 tool)
-
+### Notifications (1)
 | Tool | Description |
 |------|-------------|
 | `android.notifications.get` | Dump all current notifications via `dumpsys notification` |
 
-### Screen (4 tools)
-
+### Screen (4)
 | Tool | Description |
 |------|-------------|
 | `android.screen.wake` | Wake screen (KEYCODE_WAKEUP) |
@@ -329,12 +214,11 @@ Once the stream is started with `android.vision.startStream`, the server registe
 | `android.screen.isOn` | Check if screen is on |
 | `android.screen.unlock` | Wake and unlock screen (no-PIN devices only) |
 
-### WiFi ADB (4 tools)
-
+### WiFi ADB (4)
 | Tool | Description |
 |------|-------------|
 | `android.adb.connectWifi` | Connect to device over WiFi |
-| `android.adb.disconnectWifi` | Disconnect WiFi ADB connection |
+| `android.adb.disconnectWifi` | Disconnect WiFi ADB (one device or all) |
 | `android.adb.enableTcpip` | Enable TCP/IP mode (USB required first) |
 | `android.adb.getDeviceIp` | Get device WiFi IP address |
 
@@ -342,20 +226,20 @@ Once the stream is started with `android.vision.startStream`, the server registe
 
 ## Configuration
 
-All configuration is via environment variables:
+All options via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ADB_PATH` | `adb` | Path to the `adb` binary |
-| `FFMPEG_PATH` | `ffmpeg` | Path to the `ffmpeg` binary |
-| `SCRCPY_SERVER_PATH` | _(empty)_ | Path to scrcpy-server binary (enables vision streaming) |
-| `SCRCPY_SERVER_VERSION` | _(empty)_ | Version string matching the server binary (e.g. `3.2`) |
-| `ADB_SERVER_HOST` | _(empty)_ | ADB server host (`host.docker.internal` in Docker) |
-| `ADB_SERVER_PORT` | `5037` | ADB server port |
+| `FFMPEG_PATH` | `ffmpeg` | Path to the `ffmpeg` binary (vision streaming only) |
+| `SCRCPY_SERVER_PATH` | — | Path to scrcpy-server binary (enables vision streaming) |
+| `SCRCPY_SERVER_VERSION` | — | Version string matching the binary (e.g. `3.2`) |
+| `ADB_SERVER_HOST` | — | ADB daemon host — set to `host.docker.internal` when running in Docker |
+| `ADB_SERVER_PORT` | `5037` | ADB daemon port |
 | `DEFAULT_MAX_SIZE` | `1024` | Max stream dimension in pixels |
 | `DEFAULT_MAX_FPS` | `30` | Stream frame rate |
-| `DEFAULT_FRAME_FPS` | `2` | JPEG extraction frame rate for MCP resources |
-| `LOG_LEVEL` | `2` | `0`=silent, `1`=errors, `2`=info, `3`=debug |
+| `DEFAULT_FRAME_FPS` | `2` | JPEG extraction rate for MCP resources |
+| `LOG_LEVEL` | `2` | `0`=silent · `1`=errors · `2`=info · `3`=debug |
 
 ---
 
@@ -368,7 +252,7 @@ All configuration is via environment variables:
    → { ipAddress: "192.168.1.42" }
 4. Unplug USB
 5. android.adb.connectWifi   { ipAddress: "192.168.1.42", port: 5555 }
-6. Use "192.168.1.42:5555" as serial for all subsequent tools
+6. Use "192.168.1.42:5555" as the serial for all subsequent tools
 ```
 
 ---
@@ -380,26 +264,24 @@ git clone https://github.com/ismail-kattakath/mcp-android.git
 cd mcp-android
 npm install
 npm run build
-node dist/index.js
+node dist/index.js        # or: npm start
 ```
 
 ```bash
 # Docker
 docker build -t mcp-android .
-docker run --rm -i --network host \
-  -e ADB_SERVER_HOST=host.docker.internal \
-  mcp-android
+docker run --rm -i -e ADB_SERVER_HOST=host.docker.internal mcp-android
 ```
 
 ---
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). All PRs welcome — bug fixes, new tools, documentation improvements.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug fixes, new tools, and documentation improvements are all welcome.
 
 ## Credits
 
-This project combines and extends two excellent open-source projects:
+Built on top of two excellent open-source projects:
 
 - [mcp-scrcpy-vision](https://github.com/invidtiv/mcp-scrcpy-vision) by invidtiv — scrcpy H.264 streaming + fast input
 - [adb-mcp](https://github.com/srmorete/adb-mcp) by srmorete — ADB tool wrappers
