@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### Patch Changes
+
+- 26fed71: Fix multi-platform Docker build: use --platform=$BUILDPLATFORM in builder stage to avoid QEMU arm64 illegal instruction crash during npm install.
+
 ## 1.0.3
 
 ### Patch Changes
