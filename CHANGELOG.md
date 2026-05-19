@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3
+
+### Patch Changes
+
+- 1ee0c93: Fix npm OIDC trusted publishing pipeline: pin checkout@v5 and changesets/action@v1.5.3, remove registry-url, upgrade to Node 24.
+
 ## 1.0.2
 
 ### Patch Changes
