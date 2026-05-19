@@ -37,6 +37,7 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: npx changeset publish
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.CHANGESET_TOKEN }}
 
