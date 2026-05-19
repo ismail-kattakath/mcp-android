@@ -28,8 +28,10 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Publish to npm (trusted publishing)
+      - name: Publish to npm
         run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
