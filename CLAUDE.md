@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-**mcp-android** is a Model Context Protocol (MCP) server that exposes 37 tools for AI-driven Android device control. It wraps ADB (Android Debug Bridge) and optionally scrcpy for low-latency streaming and input injection.
+**mcp-android** is a Model Context Protocol (MCP) server that exposes 46 tools for AI-driven Android device control. It wraps ADB (Android Debug Bridge) and optionally scrcpy for low-latency streaming and input injection.
 
 ## Commands
 
@@ -23,7 +23,7 @@ The server is implemented in six files under `src/`:
 
 | File | Responsibility |
 |------|---------------|
-| `index.ts` | MCP server entry point; registers all 37 tools and manages streaming sessions (`Map<serial, SessionEntry>`) |
+| `index.ts` | MCP server entry point; registers all 46 tools and manages streaming sessions (`Map<serial, SessionEntry>`) |
 | `adb.ts` | ADB wrapper — spawns `adb` subprocesses for every device operation (screencap, tap, swipe, text input, app install, logcat, etc.) |
 | `scrcpySession.ts` | H.264 streaming pipeline: scrcpy-server → TCP socket → ffmpeg → JPEG extraction |
 | `scrcpyControl.ts` | Big-endian binary encoder for scrcpy control protocol (touch, key, scroll, text, power events) |
