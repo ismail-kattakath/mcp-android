@@ -2,7 +2,7 @@
   <img src="icon.png" alt="Android Device Control" width="120" />
   <h1>Android Device Control</h1>
   <p><strong>Comprehensive Android device control for AI agents</strong></p>
-  <p>ADB + scrcpy H.264 vision streaming + fast input — 37 tools</p>
+  <p>ADB + scrcpy H.264 vision streaming + fast input — 46 tools</p>
 
   [![npm version](https://img.shields.io/npm/v/@ismail-kattakath/mcp-android?logo=npm&color=CB0000)](https://www.npmjs.com/package/@ismail-kattakath/mcp-android)
   [![GHCR](https://img.shields.io/badge/ghcr.io-latest-blue?logo=docker)](https://github.com/ismail-kattakath/mcp-android/pkgs/container/mcp-android)
@@ -18,7 +18,7 @@ Give your AI agent full control over Android devices — take screenshots, tap a
 
 ## Features
 
-- **37 MCP tools** across 11 categories — devices, vision, input, UI, apps, system, files, clipboard, notifications, screen control, WiFi ADB
+- **46 MCP tools** across 11 categories — devices, vision, input, UI, apps, system, files, clipboard, notifications, screen control, WiFi ADB
 - **Live H.264 vision streaming** via scrcpy standalone server + ffmpeg → JPEG resources at ~2 FPS
 - **Fast input** via scrcpy control protocol (~5ms per event vs ~100–300ms for `adb shell input`)
 - **Snapshot mode** — screenshot + UI dump work without scrcpy, no extra deps
@@ -154,7 +154,7 @@ Once started with `android.vision.startStream`, a live resource is registered at
 | `android.vision.stopStream` | Stop stream and remove frame resource |
 | `android.vision.snapshot` | Take PNG screenshot via `adb exec-out screencap -p` |
 
-### Input (7)
+### Input (9)
 | Tool | Description |
 |------|-------------|
 | `android.input.tap` | Tap at (x, y) — fast via scrcpy or `adb shell input` |
@@ -164,6 +164,8 @@ Once started with `android.vision.startStream`, a live resource is registered at
 | `android.input.longPress` | Long press with duration |
 | `android.input.pinch` | Pinch gesture (zoom in/out) |
 | `android.input.dragDrop` | Drag and drop |
+| `android.input.doubleTap` | Double tap at (x, y) with configurable interval — fast via scrcpy or adb |
+| `android.input.scroll` | Scroll up/down/left/right — fast via scrcpy scroll protocol or adb swipe |
 
 ### UI Automation (2)
 | Tool | Description |
@@ -171,12 +173,14 @@ Once started with `android.vision.startStream`, a live resource is registered at
 | `android.ui.dump` | Dump full UI hierarchy XML via uiautomator |
 | `android.ui.findElement` | Find elements by text, resource-id, class, or content-desc — returns center coordinates |
 
-### Apps (5)
+### Apps (7)
 | Tool | Description |
 |------|-------------|
 | `android.app.start` | Launch app by package name (+ optional activity) |
 | `android.app.stop` | Force-stop app |
 | `android.app.install` | Install APK via `adb install -r` |
+| `android.app.uninstall` | Uninstall app by package name; optional `-k` to keep data |
+| `android.app.openUrl` | Open URL via `android.intent.action.VIEW` — supports https://, deep links, market:// |
 | `android.apps.list` | List installed packages (all / system-only / third-party) |
 | `android.activity.current` | Get currently focused package and activity |
 
@@ -206,13 +210,18 @@ Once started with `android.vision.startStream`, a live resource is registered at
 |------|-------------|
 | `android.notifications.get` | Dump all current notifications via `dumpsys notification` |
 
-### Screen (4)
+### Screen (9)
 | Tool | Description |
 |------|-------------|
 | `android.screen.wake` | Wake screen (KEYCODE_WAKEUP) |
 | `android.screen.sleep` | Put screen to sleep (KEYCODE_SLEEP) |
 | `android.screen.isOn` | Check if screen is on |
 | `android.screen.unlock` | Wake and unlock screen (no-PIN devices only) |
+| `android.screen.getSize` | Get screen dimensions `{ width, height, physicalWidth, physicalHeight }` |
+| `android.screen.getOrientation` | Get orientation: portrait/landscape/portrait_reverse/landscape_reverse + degrees |
+| `android.screen.setOrientation` | Lock orientation or restore auto-rotation |
+| `android.screen.startRecord` | Start `adb screenrecord` (MPEG-4/H.264); configurable bitrate, size, time limit |
+| `android.screen.stopRecord` | Stop recording, finalize MP4, optionally pull to host |
 
 ### WiFi ADB (4)
 | Tool | Description |
